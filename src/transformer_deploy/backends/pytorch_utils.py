@@ -115,6 +115,7 @@ def convert_to_onnx(
     var_output_seq: bool,
     output_names: List[str],
     load_external_data: bool = False,
+    opset_version=13,
 ) -> None:
     """
     Convert a Pytorch model to an ONNX graph by tracing the provided input inside the Pytorch code.
@@ -183,7 +184,7 @@ def convert_to_onnx(
             model_pytorch,  # model to optimize
             args=tuple(inputs_pytorch.values()),  # tuple of multiple inputs
             f=output_path,  # output path / file object
-            opset_version=13,  # the ONNX version to use, >= 13 supports channel quantized model
+            opset_version=opset_version,  # the ONNX version to use, >= 13 supports channel quantized model
             do_constant_folding=True,  # simplify model (replace constant expressions)
             input_names=input_names,  # input names
             output_names=output_names,  # output names
