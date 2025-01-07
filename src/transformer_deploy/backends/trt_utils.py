@@ -156,7 +156,10 @@ def build_engine(
     parser: OnnxParser = trt.OnnxParser(network_def, logger)
     config: IBuilderConfig = builder.create_builder_config()
     if workspace_size is not None:
-        config.set_memory_pool_limit(trt.tensorrt.MemoryPoolType.DLA_GLOBAL_DRAM, workspace_size)
+        if builder.num_DLA_cores > 0:  # DLA cores available
+            config.set_memory_pool_limit(trt.tensorrt.MemoryPoolType.DLA_GLOBAL_DRAM, workspace_size)
+        else:
+            logger.log(msg="Skipping DLA memory pool limit setting as DLA is not available or enabled", severity=trt.ILogger.WARNING)
     config.set_tactic_sources(
         tactic_sources=1 << int(trt.TacticSource.CUBLAS)
         | 1 << int(trt.TacticSource.CUBLAS_LT)
