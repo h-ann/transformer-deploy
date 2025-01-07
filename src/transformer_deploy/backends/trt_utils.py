@@ -225,7 +225,11 @@ def get_output_tensors(
     """
     # explicitly set dynamic input shapes, so dynamic output shapes can be computed internally
     for host_input, binding_index in zip(host_inputs, input_binding_idxs):
-        context.set_binding_shape(binding_index, tuple(host_input.shape))
+        if trt.__version__ > '10':
+            tensor_name = context.engine.get_tensor_name(binding_index)
+            context.set_input_shape(tensor_name, tuple(host_input.shape))
+        else:
+            context.set_binding_shape(binding_index, tuple(host_input.shape))
     # assert context.all_binding_shapes_specified
     device_outputs: Dict[str, torch.Tensor] = dict()
     for binding_index in output_binding_idxs:
