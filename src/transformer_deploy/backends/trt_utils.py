@@ -234,10 +234,11 @@ def get_output_tensors(
     device_outputs: Dict[str, torch.Tensor] = dict()
     for binding_index in output_binding_idxs:
         # TensorRT computes output shape based on input shape provided above
-        output_shape = context.get_binding_shape(binding=binding_index)
         if trt.__version__ > '10':
+            output_shape = context.get_tensor_shape(context.engine.get_tensor_name(binding_index))
             output_name = context.engine.get_tensor_name(index=binding_index)
         else:
+            output_shape = context.get_binding_shape(binding=binding_index)
             output_name = context.engine.get_binding_name(index=binding_index)
         # allocate buffers to hold output results
         device_outputs[output_name] = torch.empty(tuple(output_shape), device="cuda")
