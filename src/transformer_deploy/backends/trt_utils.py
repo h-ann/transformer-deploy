@@ -292,9 +292,14 @@ def infer_tensorrt(
         context, input_tensors, input_binding_idxs, output_binding_idxs
     )
     bindings = [int(i.data_ptr()) for i in input_tensors + list(outputs.values())]
-    assert context.execute_async_v2(
-        bindings, torch.cuda.current_stream().cuda_stream
-    ), "failure during execution of inference"
+    if trt.__version__ > '10':
+        assert context.execute_async_v3(
+            bindings, torch.cuda.current_stream().cuda_stream
+        ), "failure during execution of inference"
+    else:
+        assert context.execute_async_v2(
+            bindings, torch.cuda.current_stream().cuda_stream
+        ), "failure during execution of inference"
     torch.cuda.current_stream().synchronize()  # sync all CUDA ops
 
     return outputs
