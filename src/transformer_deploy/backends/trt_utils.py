@@ -269,7 +269,7 @@ def infer_tensorrt(
         if trt.__version__ > '10':
             tensor_name = context.engine.get_tensor_name(i)
             tensor_mode = context.engine.get_tensor_mode(tensor_name)
-            if not (tensor_mode == trt.TensorIOMode.INPUT):
+            if tensor_mode != trt.TensorIOMode.INPUT:
                 continue
         else:
             if not context.engine.binding_is_input(index=i):
@@ -287,20 +287,25 @@ def infer_tensorrt(
             logging.warning(f"using {tensor.dtype} instead of int32 for {tensor_name}, will be casted to int32")
             tensor = tensor.type(torch.int32)
         input_tensors.append(tensor)
+
+        context.set_tensor_address(tensor_name, tensor.data_ptr())
+
     # calculate input shape, bind it, allocate GPU memory for the output
     outputs: Dict[str, torch.Tensor] = get_output_tensors(
         context, input_tensors, input_binding_idxs, output_binding_idxs
     )
-    bindings = [int(i.data_ptr()) for i in input_tensors + list(outputs.values())]
+
+    for tensor_name, tensor in outputs.items():
+        context.set_tensor_address(tensor_name, tensor.data_ptr())
+
+    cuda_stream = torch.cuda.current_stream().cuda_stream
+
     if trt.__version__ > '10':
-        # assert context.execute_async_v3(
-        #     bindings, torch.cuda.current_stream().cuda_stream
-        # ), "failure during execution of inference"
-        cuda_stream = torch.cuda.current_stream().cuda_stream
         assert context.execute_async_v3(cuda_stream), "Failure during inference"
     else:
+        bindings = [int(i.data_ptr()) for i in input_tensors + list(outputs.values())]
         assert context.execute_async_v2(
-            bindings, torch.cuda.current_stream().cuda_stream
+            bindings, cuda_stream
         ), "failure during execution of inference"
     torch.cuda.current_stream().synchronize()  # sync all CUDA ops
 
