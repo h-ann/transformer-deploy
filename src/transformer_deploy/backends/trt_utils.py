@@ -258,8 +258,14 @@ def infer_tensorrt(
     else:
         iter = context.engine.num_bindings
     for i in range(iter):
-        if not context.engine.binding_is_input(index=i):
-            continue
+        if trt.__version__ > '10':
+            tensor_name = context.engine.get_tensor_name(i)
+            tensor_mode = context.engine.get_tensor_mode(tensor_name)
+            if not (tensor_mode == trt.TensorIOMode.INPUT):
+                continue
+        else:
+            if not context.engine.binding_is_input(index=i):
+                continue
         tensor_name = context.engine.get_binding_name(i)
         assert tensor_name in inputs, f"input not provided: {tensor_name}"
         tensor = inputs[tensor_name]
@@ -339,10 +345,18 @@ def get_binding_idxs(engine: trt.ICudaEngine, profile_index: int):
     input_binding_idxs: List[int] = []
     output_binding_idxs: List[int] = []
     for binding_index in range(start_binding, end_binding):
-        if engine.binding_is_input(binding_index):
-            input_binding_idxs.append(binding_index)
+        if trt.__version__ > '10':
+            tensor_name = engine.get_tensor_name(binding_index)
+            tensor_mode = engine.get_tensor_mode(tensor_name)
+            if tensor_mode == trt.TensorIOMode.INPUT:
+                input_binding_idxs.append(binding_index)
+            else:
+                output_binding_idxs.append(binding_index)
         else:
-            output_binding_idxs.append(binding_index)
+            if engine.binding_is_input(binding_index):
+                input_binding_idxs.append(binding_index)
+            else:
+                output_binding_idxs.append(binding_index)
     return input_binding_idxs, output_binding_idxs
 
 
