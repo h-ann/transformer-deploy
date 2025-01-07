@@ -253,7 +253,11 @@ def infer_tensorrt(
     """
 
     input_tensors: List[torch.Tensor] = list()
-    for i in range(context.engine.num_bindings):
+    if trt.__version__ > '10':
+        iter = context.engine.num_io_tensors
+    else:
+        iter = context.engine.num_bindings
+    for i in range(iter):
         if not context.engine.binding_is_input(index=i):
             continue
         tensor_name = context.engine.get_binding_name(i)
@@ -326,7 +330,10 @@ def get_binding_idxs(engine: trt.ICudaEngine, profile_index: int):
     :param profile_index: profile to use (several profiles can be set during building)
     :return: input and output tensor indexes
     """
-    num_bindings_per_profile = engine.num_bindings // engine.num_optimization_profiles
+    if trt.__version__ > '10':
+        num_bindings_per_profile = engine.num_io_tensors // engine.num_optimization_profiles
+    else:
+        num_bindings_per_profile = engine.num_bindings // engine.num_optimization_profiles
     start_binding = profile_index * num_bindings_per_profile
     end_binding = start_binding + num_bindings_per_profile  # Separate input and output binding indices for convenience
     input_binding_idxs: List[int] = []
