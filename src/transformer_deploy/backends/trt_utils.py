@@ -293,9 +293,11 @@ def infer_tensorrt(
     )
     bindings = [int(i.data_ptr()) for i in input_tensors + list(outputs.values())]
     if trt.__version__ > '10':
-        assert context.execute_async_v3(
-            bindings, torch.cuda.current_stream().cuda_stream
-        ), "failure during execution of inference"
+        # assert context.execute_async_v3(
+        #     bindings, torch.cuda.current_stream().cuda_stream
+        # ), "failure during execution of inference"
+        cuda_stream = torch.cuda.current_stream().cuda_stream
+        assert context.execute_async_v3(cuda_stream), "Failure during inference"
     else:
         assert context.execute_async_v2(
             bindings, torch.cuda.current_stream().cuda_stream
