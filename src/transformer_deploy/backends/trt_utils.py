@@ -231,7 +231,10 @@ def get_output_tensors(
     for binding_index in output_binding_idxs:
         # TensorRT computes output shape based on input shape provided above
         output_shape = context.get_binding_shape(binding=binding_index)
-        output_name = context.engine.get_binding_name(index=binding_index)
+        if trt.__version__ > '10':
+            output_name = context.engine.get_tensor_name(index=binding_index)
+        else:
+            output_name = context.engine.get_binding_name(index=binding_index)
         # allocate buffers to hold output results
         device_outputs[output_name] = torch.empty(tuple(output_shape), device="cuda")
     return device_outputs
@@ -266,7 +269,10 @@ def infer_tensorrt(
         else:
             if not context.engine.binding_is_input(index=i):
                 continue
-        tensor_name = context.engine.get_binding_name(i)
+        if trt.__version__ > '10':
+            tensor_name = context.engine.get_tensor_name(i)
+        else:
+            tensor_name = context.engine.get_binding_name(i)
         assert tensor_name in inputs, f"input not provided: {tensor_name}"
         tensor = inputs[tensor_name]
         assert isinstance(tensor, torch.Tensor), f"unexpected tensor class: {type(tensor)}"
